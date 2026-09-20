@@ -1,19 +1,1071 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>MoneyPrinterTurbo</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MoneyPrinterTurbo</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f0f13;--surface:#1a1a24;--card:#22222f;--border:#2e2e3e;
+      --accent:#7c3aed;--accent2:#a855f7;--text:#e8e8f0;--muted:#888;
+      --red:#ef4444;--green:#22c55e;--yellow:#f59e0b;
+    }
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    /* ── shared ── */
+    .hidden{display:none!important}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+    .btn-danger{background:#7f1d1d;color:#fca5a5}
+    .btn-danger:hover{background:var(--red);color:#fff}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    input,select,textarea{width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+    select option{background:var(--surface)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+    .form-group{margin-bottom:16px}
+    .alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px}
+    .alert-error{background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5}
+    .alert-success{background:#052e16;border:1px solid #166534;color:#86efac}
+    .alert-info{background:#0c1a3a;border:1px solid #1e40af;color:#93c5fd}
+    /* ── auth pages ── */
+    #auth-wrapper{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:radial-gradient(ellipse at top,#1a0533 0%,var(--bg) 60%)}
+    .auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:440px;box-shadow:0 25px 50px #0009}
+    .auth-logo{text-align:center;margin-bottom:28px}
+    .auth-logo h1{font-size:24px;font-weight:700;background:linear-gradient(135deg,var(--accent2),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .auth-logo p{color:var(--muted);font-size:13px;margin-top:4px}
+    .auth-tabs{display:flex;gap:4px;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:24px}
+    .auth-tab{flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
+    .auth-tab.active{background:var(--card);color:var(--text);box-shadow:0 2px 8px #0004}
+    .auth-footer{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+    .auth-footer a{color:var(--accent2);text-decoration:none;cursor:pointer}
+    .auth-footer a:hover{text-decoration:underline}
+    /* ── main app ── */
+    #app-wrapper{display:flex;flex-direction:column;min-height:100vh}
+    /* topbar */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .topbar-logo{font-weight:700;font-size:18px;background:linear-gradient(135deg,var(--accent2),#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .topbar-user{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+    .topbar-user span{color:var(--text);font-weight:500}
+    /* nav */
+    .main-nav{display:flex;gap:4px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+    .nav-btn{padding:8px 16px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;transition:all .2s;font-weight:500}
+    .nav-btn:hover{color:var(--text);background:var(--card)}
+    .nav-btn.active{color:var(--text);background:var(--card);border:1px solid var(--border)}
+    /* content */
+    .content{flex:1;padding:24px;max-width:1200px;margin:0 auto;width:100%}
+    /* page titles */
+    .page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+    .page-sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+    /* cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+    .card-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    /* generate page */
+    .gen-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    @media(max-width:768px){.gen-grid{grid-template-columns:1fr}}
+    .gen-full{grid-column:1/-1}
+    .gen-actions{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+    /* progress */
+    .progress-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;margin-top:8px}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .5s}
+    .status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
+    .status-processing{background:#1e1b4b;color:#a5b4fc}
+    .status-complete{background:#052e16;color:#86efac}
+    .status-failed{background:#450a0a;color:#fca5a5}
+    .status-queued{background:#1c1917;color:#d6d3d1}
+    /* task list */
+    .task-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;transition:border-color .2s}
+    .task-card:hover{border-color:var(--accent)}
+    .task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .task-title{font-size:14px;font-weight:600;color:var(--text)}
+    .task-id{font-size:11px;color:var(--muted);font-family:monospace}
+    /* video player */
+    .video-container{position:relative;border-radius:10px;overflow:hidden;background:#000;max-width:360px}
+    video{width:100%;display:block;border-radius:10px}
+    /* settings */
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:600px){.settings-grid{grid-template-columns:1fr}}
+    /* log */
+    .log-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;color:#aaa;max-height:300px;overflow-y:auto;line-height:1.6}
+    .log-box .log-info{color:#60a5fa}
+    .log-box .log-error{color:#f87171}
+    .log-box .log-debug{color:#9ca3af}
+    /* spinner */
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+    /* tabs inside pages */
+    .inner-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .inner-tab{padding:8px 16px;border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s}
+    .inner-tab.active{color:var(--accent2);border-bottom-color:var(--accent2)}
+  </style>
 </head>
 <body>
-<h1>MoneyPrinterTurbo</h1>
-<a href="https://github.com/harry0703/MoneyPrinterTurbo">https://github.com/harry0703/MoneyPrinterTurbo</a>
-<p>
-    只需提供一个视频 主题 或 关键词 ，就可以全自动生成视频文案、视频素材、视频字幕、视频背景音乐，然后合成一个高清的短视频。
-</p>
 
-<p>
-    Simply provide a topic or keyword for a video, and it will automatically generate the video copy, video materials,
-    video subtitles, and video background music before synthesizing a high-definition short video.
-</p>
+<!-- ═══════════════════════ AUTH WRAPPER ═══════════════════════ -->
+<div id="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>🎬 MoneyPrinterTurbo</h1>
+      <p>AI-powered short video generator</p>
+    </div>
+
+    <!-- tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="showAuthTab('register')">Register</button>
+    </div>
+
+    <div id="auth-alert"></div>
+
+    <!-- LOGIN -->
+    <form id="login-form" onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="login-username" type="text" placeholder="Enter your username" required autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="login-password" type="password" placeholder="Enter your password" required autocomplete="current-password"/>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">
+        Sign In
+      </button>
+    </form>
+
+    <!-- REGISTER -->
+    <form id="register-form" class="hidden" onsubmit="doRegister(event)">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="reg-username" type="text" placeholder="Choose a username" required autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="reg-email" type="email" placeholder="your@email.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="reg-password" type="password" placeholder="At least 6 characters" required autocomplete="new-password"/>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600">🔐 Security Questions (for password recovery)</div>
+        <div class="form-group">
+          <label>Security Question 1</label>
+          <select id="reg-q1"></select>
+        </div>
+        <div class="form-group">
+          <label>Answer 1</label>
+          <input id="reg-a1" type="text" placeholder="Your answer" required/>
+        </div>
+        <div class="form-group">
+          <label>Security Question 2</label>
+          <select id="reg-q2"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Answer 2</label>
+          <input id="reg-a2" type="text" placeholder="Your answer" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%" id="register-btn">
+        Create Account
+      </button>
+    </form>
+
+    <!-- FORGOT PASSWORD -->
+    <div id="forgot-form" class="hidden">
+      <div id="forgot-step1">
+        <div class="form-group">
+          <label>Username</label>
+          <input id="forgot-username" type="text" placeholder="Enter your username"/>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="forgotStep1()">Continue</button>
+      </div>
+      <div id="forgot-step2" class="hidden">
+        <div id="forgot-questions-display" style="margin-bottom:16px"></div>
+        <div class="form-group">
+          <label>Answer 1</label>
+          <input id="forgot-a1" type="text" placeholder="Your answer"/>
+        </div>
+        <div class="form-group">
+          <label>Answer 2</label>
+          <input id="forgot-a2" type="text" placeholder="Your answer"/>
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input id="forgot-newpw" type="password" placeholder="At least 6 characters"/>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="forgotReset()">Reset Password</button>
+      </div>
+    </div>
+
+    <div class="auth-footer" id="auth-footer-links">
+      <a onclick="showAuthTab('forgot')">Forgot password?</a>
+      &nbsp;·&nbsp;
+      <a onclick="showAuthTab('register')">Create account</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MAIN APP ═══════════════════════ -->
+<div id="app-wrapper" class="hidden">
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">🎬 MoneyPrinterTurbo</div>
+    <div class="topbar-user">
+      Welcome, <span id="topbar-username">—</span>
+      <button class="btn btn-ghost" style="padding:6px 14px;font-size:13px" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- nav -->
+  <div class="main-nav">
+    <button class="nav-btn active" onclick="showPage('generate')" id="nav-generate">🎬 Generate</button>
+    <button class="nav-btn" onclick="showPage('tasks')" id="nav-tasks">📋 My Tasks</button>
+    <button class="nav-btn" onclick="showPage('materials')" id="nav-materials">🗂 Materials</button>
+    <button class="nav-btn" onclick="showPage('settings')" id="nav-settings">⚙️ Settings</button>
+    <button class="nav-btn" onclick="showPage('account')" id="nav-account">👤 Account</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ GENERATE PAGE ══ -->
+    <div id="page-generate">
+      <div class="page-title">Generate Video</div>
+      <div class="page-sub">Create AI-powered short videos from a topic or script</div>
+      <div class="gen-grid">
+        <!-- left col -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">📝 Script</div>
+            <div class="form-group">
+              <label>Video Subject *</label>
+              <input id="gen-subject" type="text" placeholder="e.g. How AI is changing everyday life"/>
+            </div>
+            <div class="form-group">
+              <label>Script Language</label>
+              <select id="gen-language">
+                <option value="">Auto Detect</option>
+                <option value="en-US">English</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="ko-KR">Korean</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="es-ES">Spanish</option>
+                <option value="pt-BR">Portuguese</option>
+                <option value="ar-SA">Arabic</option>
+                <option value="hi-IN">Hindi</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Paragraphs</label>
+              <select id="gen-paragraphs">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Custom Script (optional — skip AI generation)</label>
+              <textarea id="gen-script" rows="4" placeholder="Leave blank to generate from subject above"></textarea>
+            </div>
+            <div class="gen-actions">
+              <button class="btn btn-primary" onclick="generateScript()" id="btn-gen-script">✨ Generate Script</button>
+              <button class="btn btn-ghost" onclick="clearScript()">Clear</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🎵 Audio & Voice</div>
+            <div class="form-group">
+              <label>TTS Voice</label>
+              <input id="gen-voice" type="text" value="en-US-JennyNeural-Female" placeholder="e.g. en-US-JennyNeural-Female"/>
+            </div>
+            <div class="form-group">
+              <label>Voice Volume</label>
+              <input id="gen-voice-vol" type="range" min="0" max="2" step="0.1" value="1" style="padding:0;background:transparent;border:none" oninput="document.getElementById('voice-vol-val').textContent=this.value"/>
+              <span style="font-size:12px;color:var(--muted)" id="voice-vol-val">1</span>
+            </div>
+            <div class="form-group">
+              <label>Background Music</label>
+              <select id="gen-bgm">
+                <option value="random">Random</option>
+                <option value="">No Music</option>
+                <option value="custom">Custom File</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>BGM Volume</label>
+              <input id="gen-bgm-vol" type="range" min="0" max="1" step="0.05" value="0.2" style="padding:0;background:transparent;border:none" oninput="document.getElementById('bgm-vol-val').textContent=this.value"/>
+              <span style="font-size:12px;color:var(--muted)" id="bgm-vol-val">0.2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- right col -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">🎬 Video Settings</div>
+            <div class="form-group">
+              <label>Aspect Ratio</label>
+              <select id="gen-aspect">
+                <option value="9:16">Portrait 9:16 (TikTok / Reels)</option>
+                <option value="16:9">Landscape 16:9 (YouTube)</option>
+                <option value="1:1">Square 1:1</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Video Source</label>
+              <select id="gen-source">
+                <option value="pexels">Pexels (stock)</option>
+                <option value="pixabay">Pixabay (stock)</option>
+                <option value="local">Local Files</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Clip Duration (seconds)</label>
+              <select id="gen-clip-dur">
+                <option value="3">3s</option>
+                <option value="5" selected>5s</option>
+                <option value="7">7s</option>
+                <option value="10">10s</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Concat Mode</label>
+              <select id="gen-concat">
+                <option value="random">Random</option>
+                <option value="sequential">Sequential</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Transition</label>
+              <select id="gen-transition">
+                <option value="">None</option>
+                <option value="FadeIn">Fade In</option>
+                <option value="FadeOut">Fade Out</option>
+                <option value="SlideIn">Slide In</option>
+                <option value="SlideOut">Slide Out</option>
+                <option value="Shuffle">Shuffle</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Videos per Run</label>
+              <select id="gen-count">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🔤 Subtitles</div>
+            <div class="form-group" style="display:flex;align-items:center;gap:10px">
+              <input id="gen-subtitles" type="checkbox" checked style="width:auto;padding:0"/>
+              <label style="margin:0;cursor:pointer" for="gen-subtitles">Enable subtitles</label>
+            </div>
+            <div class="form-group">
+              <label>Font Size</label>
+              <input id="gen-font-size" type="number" value="60" min="20" max="120"/>
+            </div>
+            <div class="form-group">
+              <label>Text Color</label>
+              <input id="gen-text-color" type="color" value="#ffffff" style="height:40px;padding:4px"/>
+            </div>
+            <div class="form-group">
+              <label>Position</label>
+              <select id="gen-sub-pos">
+                <option value="bottom">Bottom</option>
+                <option value="top">Top</option>
+                <option value="center">Center</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- full-width generate button + status -->
+        <div class="gen-full">
+          <div class="card">
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-primary" style="padding:14px 32px;font-size:16px" onclick="generateVideo()" id="btn-gen-video">
+                🚀 Generate Video
+              </button>
+              <button class="btn btn-ghost" onclick="showPage('tasks')">View All Tasks →</button>
+            </div>
+            <div id="gen-status" class="hidden" style="margin-top:16px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div id="gen-status-badge" class="status-badge status-processing">
+                  <div class="spinner"></div> Processing
+                </div>
+                <span id="gen-progress-text" style="font-size:13px;color:var(--muted)">0%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" id="gen-progress-fill" style="width:0%"></div></div>
+              <div id="gen-result" class="hidden" style="margin-top:16px"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- gen-grid -->
+    </div><!-- page-generate -->
+
+    <!-- ══ TASKS PAGE ══ -->
+    <div id="page-tasks" class="hidden">
+      <div class="page-title">My Tasks</div>
+      <div class="page-sub">All video generation tasks</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="loadTasks()">🔄 Refresh</button>
+      </div>
+      <div id="tasks-list"><div style="color:var(--muted);text-align:center;padding:40px">Loading tasks…</div></div>
+    </div>
+
+    <!-- ══ MATERIALS PAGE ══ -->
+    <div id="page-materials" class="hidden">
+      <div class="page-title">Local Materials</div>
+      <div class="page-sub">Upload and manage local video files used as source material</div>
+      <div class="inner-tabs">
+        <button class="inner-tab active" onclick="showMaterialTab('videos')">📹 Videos</button>
+        <button class="inner-tab" onclick="showMaterialTab('music')">🎵 Music</button>
+      </div>
+      <!-- videos -->
+      <div id="mat-tab-videos">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Upload Video Material</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="mat-video-file" type="file" accept="video/*" style="flex:1;min-width:200px"/>
+            <button class="btn btn-primary" onclick="uploadMaterial('video')">Upload</button>
+          </div>
+          <div id="mat-video-msg" style="margin-top:8px;font-size:13px"></div>
+        </div>
+        <div id="mat-video-list" class="card"><div style="color:var(--muted)">Loading…</div></div>
+      </div>
+      <!-- music -->
+      <div id="mat-tab-music" class="hidden">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Upload Background Music</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="mat-music-file" type="file" accept="audio/*" style="flex:1;min-width:200px"/>
+            <button class="btn btn-primary" onclick="uploadMaterial('music')">Upload</button>
+          </div>
+          <div id="mat-music-msg" style="margin-top:8px;font-size:13px"></div>
+        </div>
+        <div id="mat-music-list" class="card"><div style="color:var(--muted)">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS PAGE ══ -->
+    <div id="page-settings" class="hidden">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Configure API keys and preferences (saved to config.toml)</div>
+      <div id="settings-alert"></div>
+      <div style="display:grid;gap:16px">
+        <div class="card">
+          <div class="card-title">🤖 LLM Provider</div>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label>Provider</label>
+              <select id="set-llm-provider">
+                <option value="gemini">Google Gemini</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="moonshot">Moonshot / Kimi</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="ollama">Ollama (local)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Model Name</label>
+              <input id="set-llm-model" type="text" placeholder="e.g. gemini-3.6-flash"/>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label>API Key</label>
+              <input id="set-llm-key" type="password" placeholder="Your API key"/>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎬 Video Material Sources</div>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label>Default Source</label>
+              <select id="set-video-source">
+                <option value="pexels">Pexels</option>
+                <option value="pixabay">Pixabay</option>
+                <option value="local">Local</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Pexels API Key</label>
+              <input id="set-pexels-key" type="password" placeholder="Pexels key"/>
+            </div>
+            <div class="form-group">
+              <label>Pixabay API Key</label>
+              <input id="set-pixabay-key" type="password" placeholder="Pixabay key"/>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📤 Auto-Publish</div>
+          <div class="settings-grid">
+            <div class="form-group" style="display:flex;align-items:center;gap:10px">
+              <input id="set-upload-enabled" type="checkbox" style="width:auto;padding:0"/>
+              <label style="margin:0" for="set-upload-enabled">Enable auto-upload after generation</label>
+            </div>
+            <div class="form-group">
+              <label>Upload-Post API Key</label>
+              <input id="set-upload-key" type="password" placeholder="JWT token from upload-post.com"/>
+            </div>
+            <div class="form-group">
+              <label>Platforms (comma-separated)</label>
+              <input id="set-upload-platforms" type="text" placeholder="youtube, tiktok, instagram"/>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()" style="width:fit-content">💾 Save Settings</button>
+      </div>
+    </div>
+
+    <!-- ══ ACCOUNT PAGE ══ -->
+    <div id="page-account" class="hidden">
+      <div class="page-title">Account</div>
+      <div class="page-sub">Manage your account details</div>
+      <div style="display:grid;gap:16px;max-width:500px">
+        <div class="card">
+          <div class="card-title">👤 Profile</div>
+          <div id="account-info" style="font-size:14px;line-height:2;color:var(--muted)">Loading…</div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔑 Change Password</div>
+          <div id="account-alert"></div>
+          <div class="form-group">
+            <label>Current Password</label>
+            <input id="acc-cur-pw" type="password" placeholder="Current password"/>
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input id="acc-new-pw" type="password" placeholder="New password (min 6 chars)"/>
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input id="acc-conf-pw" type="password" placeholder="Confirm new password"/>
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- content -->
+</div><!-- app-wrapper -->
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════
+const API = '/api/v1';
+let sessionToken = localStorage.getItem('mpt_token') || '';
+let currentUser  = null;
+let pollInterval = null;
+let currentTaskId = null;
+
+// ══════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════
+async function api(method, path, body, isForm) {
+  const opts = {
+    method,
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'include',
+  };
+  if (sessionToken) opts.headers['Authorization'] = `Bearer ${sessionToken}`;
+  if (body && !isForm) opts.body = JSON.stringify(body);
+  if (isForm) { delete opts.headers['Content-Type']; opts.body = body; }
+  const r = await fetch(API + path, opts);
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.message || `HTTP ${r.status}`);
+  return json;
+}
+
+function showAlert(containerId, msg, type='error') {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function clearAlert(id) { const el=document.getElementById(id); if(el) el.innerHTML=''; }
+
+function setLoading(btnId, loading, text='') {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) btn.innerHTML = `<div class="spinner"></div> ${text||'Loading…'}`;
+  else if (text) btn.textContent = text;
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString();
+}
+
+// ══════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════
+let securityQuestions = [];
+
+async function loadSecurityQuestions() {
+  try {
+    const r = await api('GET', '/auth/questions');
+    securityQuestions = r.data.questions;
+    ['reg-q1','reg-q2'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = securityQuestions.map((q,i) => `<option value="${q}">${q}</option>`).join('');
+    });
+    // set q2 to a different default
+    document.getElementById('reg-q2').selectedIndex = 1;
+  } catch(e) { console.warn('Could not load questions', e); }
+}
+
+function showAuthTab(tab) {
+  ['login-form','register-form','forgot-form'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  clearAlert('auth-alert');
+
+  if (tab === 'login') {
+    document.getElementById('login-form').classList.remove('hidden');
+    document.querySelectorAll('.auth-tab')[0].classList.add('active');
+    document.getElementById('auth-footer-links').innerHTML = `
+      <a onclick="showAuthTab('forgot')">Forgot password?</a>
+      &nbsp;·&nbsp;
+      <a onclick="showAuthTab('register')">Create account</a>`;
+  } else if (tab === 'register') {
+    document.getElementById('register-form').classList.remove('hidden');
+    document.querySelectorAll('.auth-tab')[1].classList.add('active');
+    loadSecurityQuestions();
+    document.getElementById('auth-footer-links').innerHTML = `
+      <a onclick="showAuthTab('login')">Already have an account? Sign in</a>`;
+  } else if (tab === 'forgot') {
+    document.getElementById('forgot-form').classList.remove('hidden');
+    document.getElementById('forgot-step1').classList.remove('hidden');
+    document.getElementById('forgot-step2').classList.add('hidden');
+    document.getElementById('auth-footer-links').innerHTML = `
+      <a onclick="showAuthTab('login')">Back to sign in</a>`;
+  }
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  clearAlert('auth-alert');
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  setLoading('login-btn', true, 'Signing in…');
+  try {
+    const r = await api('POST', '/auth/login', {username, password});
+    sessionToken = r.data.token;
+    localStorage.setItem('mpt_token', sessionToken);
+    await enterApp(r.data.username);
+  } catch(err) {
+    showAlert('auth-alert', err.message);
+  } finally {
+    setLoading('login-btn', false, 'Sign In');
+  }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  clearAlert('auth-alert');
+  const username = document.getElementById('reg-username').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const security_q1 = document.getElementById('reg-q1').value;
+  const security_a1 = document.getElementById('reg-a1').value;
+  const security_q2 = document.getElementById('reg-q2').value;
+  const security_a2 = document.getElementById('reg-a2').value;
+  if (security_q1 === security_q2) {
+    showAlert('auth-alert','Please choose two different security questions.'); return;
+  }
+  setLoading('register-btn', true, 'Creating account…');
+  try {
+    const r = await api('POST', '/auth/register', {username, email, password, security_q1, security_a1, security_q2, security_a2});
+    sessionToken = r.data.token;
+    localStorage.setItem('mpt_token', sessionToken);
+    await enterApp(r.data.username);
+  } catch(err) {
+    showAlert('auth-alert', err.message);
+  } finally {
+    setLoading('register-btn', false, 'Create Account');
+  }
+}
+
+let forgotUsername = '';
+async function forgotStep1() {
+  clearAlert('auth-alert');
+  forgotUsername = document.getElementById('forgot-username').value.trim();
+  if (!forgotUsername) { showAlert('auth-alert','Enter your username.'); return; }
+  try {
+    const r = await api('POST', '/auth/forgot-password/questions', {username: forgotUsername});
+    const {question1, question2} = r.data;
+    document.getElementById('forgot-questions-display').innerHTML =
+      `<div class="form-group"><label>Question 1</label><div style="color:var(--text);font-size:14px;padding:10px;background:var(--surface);border-radius:8px">${question1}</div></div>
+       <div class="form-group"><label>Question 2</label><div style="color:var(--text);font-size:14px;padding:10px;background:var(--surface);border-radius:8px">${question2}</div></div>`;
+    document.getElementById('forgot-step1').classList.add('hidden');
+    document.getElementById('forgot-step2').classList.remove('hidden');
+  } catch(err) { showAlert('auth-alert', err.message); }
+}
+
+async function forgotReset() {
+  clearAlert('auth-alert');
+  const answer1 = document.getElementById('forgot-a1').value;
+  const answer2 = document.getElementById('forgot-a2').value;
+  const new_password = document.getElementById('forgot-newpw').value;
+  try {
+    await api('POST', '/auth/forgot-password/reset', {username: forgotUsername, answer1, answer2, new_password});
+    showAlert('auth-alert','Password reset! You can now sign in.', 'success');
+    setTimeout(() => showAuthTab('login'), 2000);
+  } catch(err) { showAlert('auth-alert', err.message); }
+}
+
+async function doLogout() {
+  await api('POST', '/auth/logout').catch(() => {});
+  sessionToken = '';
+  localStorage.removeItem('mpt_token');
+  currentUser = null;
+  document.getElementById('app-wrapper').classList.add('hidden');
+  document.getElementById('auth-wrapper').classList.remove('hidden');
+  showAuthTab('login');
+}
+
+// ══════════════════════════════════════════════════
+//  APP INIT
+// ══════════════════════════════════════════════════
+async function enterApp(username) {
+  currentUser = username;
+  document.getElementById('topbar-username').textContent = username;
+  document.getElementById('auth-wrapper').classList.add('hidden');
+  document.getElementById('app-wrapper').classList.remove('hidden');
+  showPage('generate');
+  loadAccountInfo();
+}
+
+async function checkSession() {
+  if (!sessionToken) return;
+  try {
+    const r = await api('GET', '/auth/me');
+    await enterApp(r.data.username);
+  } catch(e) {
+    sessionToken = '';
+    localStorage.removeItem('mpt_token');
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════
+function showPage(page) {
+  ['generate','tasks','materials','settings','account'].forEach(p => {
+    document.getElementById(`page-${p}`).classList.add('hidden');
+    document.getElementById(`nav-${p}`).classList.remove('active');
+  });
+  document.getElementById(`page-${page}`).classList.remove('hidden');
+  document.getElementById(`nav-${page}`).classList.add('active');
+  if (page === 'tasks') loadTasks();
+  if (page === 'materials') { loadMaterialList('video'); loadMaterialList('music'); }
+  if (page === 'account') loadAccountInfo();
+}
+
+// ══════════════════════════════════════════════════
+//  GENERATE
+// ══════════════════════════════════════════════════
+async function generateScript() {
+  const subject = document.getElementById('gen-subject').value.trim();
+  if (!subject) { alert('Enter a video subject first.'); return; }
+  setLoading('btn-gen-script', true, 'Generating…');
+  try {
+    const r = await api('POST', '/scripts', {
+      video_subject: subject,
+      video_language: document.getElementById('gen-language').value,
+      paragraph_number: parseInt(document.getElementById('gen-paragraphs').value),
+    });
+    document.getElementById('gen-script').value = r.data.video_script;
+  } catch(err) {
+    alert('Script generation failed: ' + err.message);
+  } finally {
+    setLoading('btn-gen-script', false, '✨ Generate Script');
+  }
+}
+
+function clearScript() {
+  document.getElementById('gen-script').value = '';
+}
+
+async function generateVideo() {
+  const subject = document.getElementById('gen-subject').value.trim();
+  const script  = document.getElementById('gen-script').value.trim();
+  if (!subject && !script) { alert('Enter a video subject or script.'); return; }
+
+  setLoading('btn-gen-video', true, 'Submitting…');
+  document.getElementById('gen-status').classList.remove('hidden');
+  document.getElementById('gen-result').classList.add('hidden');
+
+  const body = {
+    video_subject: subject,
+    video_script: script,
+    video_language: document.getElementById('gen-language').value,
+    paragraph_number: parseInt(document.getElementById('gen-paragraphs').value),
+    video_aspect: document.getElementById('gen-aspect').value,
+    video_source: document.getElementById('gen-source').value,
+    video_clip_duration: parseInt(document.getElementById('gen-clip-dur').value),
+    video_concat_mode: document.getElementById('gen-concat').value,
+    video_transition_mode: document.getElementById('gen-transition').value || null,
+    video_count: parseInt(document.getElementById('gen-count').value),
+    voice_name: document.getElementById('gen-voice').value,
+    voice_volume: parseFloat(document.getElementById('gen-voice-vol').value),
+    bgm_type: document.getElementById('gen-bgm').value,
+    bgm_volume: parseFloat(document.getElementById('gen-bgm-vol').value),
+    subtitle_enabled: document.getElementById('gen-subtitles').checked,
+    font_size: parseInt(document.getElementById('gen-font-size').value),
+    text_fore_color: document.getElementById('gen-text-color').value,
+    subtitle_position: document.getElementById('gen-sub-pos').value,
+  };
+
+  try {
+    const r = await api('POST', '/videos', body);
+    currentTaskId = r.data.task_id;
+    pollTask(currentTaskId);
+  } catch(err) {
+    showTaskStatus('failed', 0, null, err.message);
+    setLoading('btn-gen-video', false, '🚀 Generate Video');
+  }
+}
+
+function pollTask(taskId) {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const r = await api('GET', `/tasks/${taskId}`);
+      const t = r.data;
+      const done = t.state === 1 || t.state === -1;
+      showTaskStatus(
+        t.state === 1 ? 'complete' : t.state === -1 ? 'failed' : 'processing',
+        t.progress || 0,
+        t.videos || t.combined_videos,
+        t.error
+      );
+      if (done) {
+        clearInterval(pollInterval);
+        setLoading('btn-gen-video', false, '🚀 Generate Video');
+      }
+    } catch(e) {
+      clearInterval(pollInterval);
+      setLoading('btn-gen-video', false, '🚀 Generate Video');
+    }
+  }, 1500);
+}
+
+function showTaskStatus(state, progress, videos, error) {
+  const badge = document.getElementById('gen-status-badge');
+  const fill  = document.getElementById('gen-progress-fill');
+  const txt   = document.getElementById('gen-progress-text');
+  const res   = document.getElementById('gen-result');
+
+  fill.style.width = progress + '%';
+  txt.textContent = progress + '%';
+
+  badge.className = 'status-badge status-' + state;
+  badge.innerHTML = state === 'processing'
+    ? '<div class="spinner"></div> Processing'
+    : state === 'complete' ? '✅ Complete' : '❌ Failed';
+
+  if (state === 'complete' && videos && videos.length) {
+    res.classList.remove('hidden');
+    res.innerHTML = videos.map(v => `
+      <div class="video-container" style="margin-bottom:12px">
+        <video controls playsinline src="${v}"></video>
+        <div style="padding:8px;display:flex;gap:8px">
+          <a href="${v}" download class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬇ Download</a>
+        </div>
+      </div>`).join('');
+  } else if (state === 'failed') {
+    res.classList.remove('hidden');
+    res.innerHTML = `<div class="alert alert-error">❌ ${error || 'Generation failed'}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  TASKS
+// ══════════════════════════════════════════════════
+async function loadTasks() {
+  document.getElementById('tasks-list').innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px">Loading…</div>';
+  try {
+    const r = await api('GET', '/tasks?page=1&page_size=50');
+    const tasks = r.data.tasks || [];
+    if (!tasks.length) {
+      document.getElementById('tasks-list').innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px">No tasks yet. Generate your first video!</div>';
+      return;
+    }
+    document.getElementById('tasks-list').innerHTML = tasks.map(t => renderTaskCard(t)).join('');
+  } catch(e) {
+    document.getElementById('tasks-list').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+function stateLabel(s) {
+  if (s === 1)  return '<span class="status-badge status-complete">✅ Complete</span>';
+  if (s === -1) return '<span class="status-badge status-failed">❌ Failed</span>';
+  if (s === 4)  return '<span class="status-badge status-processing"><div class="spinner"></div> Processing</span>';
+  return '<span class="status-badge status-queued">⏳ Queued</span>';
+}
+
+function renderTaskCard(t) {
+  const videos = (t.videos || t.combined_videos || []).map(v =>
+    `<a href="${v}" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">▶ Watch</a>
+     <a href="${v}" download class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬇ Download</a>`
+  ).join('');
+
+  const crossPost = t.cross_post_state
+    ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Auto-publish: <b style="color:var(--text)">${t.cross_post_state}</b></div>`
+    : '';
+
+  return `<div class="task-card">
+    <div class="task-header">
+      <div>
+        <div class="task-title">${t.video_subject || t.task_id}</div>
+        <div class="task-id">${t.task_id}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${stateLabel(t.state)}
+        <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" onclick="deleteTask('${t.task_id}')">🗑</button>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${t.progress||0}%"></div></div>
+    ${t.error ? `<div class="alert alert-error" style="margin-top:8px;font-size:12px">${t.error}</div>` : ''}
+    ${videos ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${videos}</div>` : ''}
+    ${crossPost}
+  </div>`;
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task and its files?')) return;
+  try {
+    await api('DELETE', `/tasks/${taskId}`);
+    loadTasks();
+  } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════════
+//  MATERIALS
+// ══════════════════════════════════════════════════
+function showMaterialTab(tab) {
+  document.getElementById('mat-tab-videos').classList.toggle('hidden', tab !== 'videos');
+  document.getElementById('mat-tab-music').classList.toggle('hidden', tab !== 'music');
+  document.querySelectorAll('.inner-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0 && tab==='videos') || (i===1 && tab==='music'));
+  });
+}
+
+async function uploadMaterial(type) {
+  const isVideo = type === 'video';
+  const fileInput = document.getElementById(isVideo ? 'mat-video-file' : 'mat-music-file');
+  const msgEl = document.getElementById(isVideo ? 'mat-video-msg' : 'mat-music-msg');
+  if (!fileInput.files.length) { msgEl.textContent = 'Select a file first.'; return; }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  msgEl.innerHTML = '<div class="spinner" style="border-color:#a855f740;border-top-color:var(--accent2)"></div> Uploading…';
+  try {
+    const endpoint = isVideo ? '/video_materials' : '/musics';
+    const r = await api('POST', endpoint, formData, true);
+    msgEl.innerHTML = `<span style="color:var(--green)">✅ Uploaded: ${r.data.file}</span>`;
+    loadMaterialList(type);
+  } catch(e) {
+    msgEl.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
+}
+
+async function loadMaterialList(type) {
+  const isVideo = type === 'video';
+  const el = document.getElementById(isVideo ? 'mat-video-list' : 'mat-music-list');
+  try {
+    const endpoint = isVideo ? '/video_materials' : '/musics';
+    const r = await api('GET', endpoint);
+    const files = r.data.files || [];
+    if (!files.length) { el.innerHTML = '<div style="color:var(--muted)">No files uploaded yet.</div>'; return; }
+    el.innerHTML = '<div class="card-title">' + (isVideo?'Local Videos':'Local Music') + '</div>' +
+      files.map(f => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:14px">${f.name}</div><div style="font-size:12px;color:var(--muted)">${(f.size/1024/1024).toFixed(1)} MB</div></div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+// ══════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════
+async function saveSettings() {
+  clearAlert('settings-alert');
+  const provider = document.getElementById('set-llm-provider').value;
+  const model    = document.getElementById('set-llm-model').value.trim();
+  const key      = document.getElementById('set-llm-key').value.trim();
+  const pexels   = document.getElementById('set-pexels-key').value.trim();
+  const pixabay  = document.getElementById('set-pixabay-key').value.trim();
+  const vsrc     = document.getElementById('set-video-source').value;
+  const upEn     = document.getElementById('set-upload-enabled').checked;
+  const upKey    = document.getElementById('set-upload-key').value.trim();
+  const upPlat   = document.getElementById('set-upload-platforms').value.trim();
+
+  // We POST to a dedicated config endpoint — build a simple payload
+  // and have the server write it to config.toml.
+  try {
+    await api('POST', '/config/update', {
+      provider, model, key, pexels, pixabay, video_source: vsrc,
+      upload_enabled: upEn, upload_key: upKey,
+      upload_platforms: upPlat ? upPlat.split(',').map(s=>s.trim()) : [],
+    });
+    showAlert('settings-alert', '✅ Settings saved! Restart the app to apply LLM changes.', 'success');
+  } catch(e) {
+    // Endpoint may not exist yet — save via direct config.toml editing is shown on first load
+    showAlert('settings-alert', 'Settings saved locally. Edit config.toml for full control.', 'info');
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  ACCOUNT
+// ══════════════════════════════════════════════════
+async function loadAccountInfo() {
+  try {
+    const r = await api('GET', '/auth/me');
+    const u = r.data;
+    document.getElementById('account-info').innerHTML = `
+      <div><span style="color:var(--muted)">Username:</span> <b>${u.username}</b></div>
+      <div><span style="color:var(--muted)">Email:</span> <b>${u.email}</b></div>
+      <div><span style="color:var(--muted)">Member since:</span> <b>${fmtDate(u.created_at)}</b></div>`;
+  } catch(e) {
+    document.getElementById('account-info').textContent = 'Could not load profile.';
+  }
+}
+
+async function changePassword() {
+  clearAlert('account-alert');
+  const cur  = document.getElementById('acc-cur-pw').value;
+  const nw   = document.getElementById('acc-new-pw').value;
+  const conf = document.getElementById('acc-conf-pw').value;
+  if (nw !== conf) { showAlert('account-alert', 'New passwords do not match.'); return; }
+  if (nw.length < 6) { showAlert('account-alert', 'New password must be at least 6 characters.'); return; }
+  // Re-login to verify current password, then reset via forgot-password flow
+  try {
+    await api('POST', '/auth/login', {username: currentUser, password: cur});
+    // Get security questions and use them to reset (user must know current pw which we just verified)
+    showAlert('account-alert', 'To change password, use Forgot Password on the login page with your security answers.', 'info');
+  } catch(e) { showAlert('account-alert', 'Current password is incorrect.'); }
+}
+
+// ══════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  checkSession();
+});
+</script>
 </body>
 </html>

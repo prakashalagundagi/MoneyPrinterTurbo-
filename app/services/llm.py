@@ -17,6 +17,18 @@ from app.config import config
 from app.models.llm_provider import DEFAULT_LLM_PROVIDER_ID, get_llm_provider
 
 _max_retries = 5
+
+# OpenRouter free models to rotate through when one is rate-limited or unavailable.
+# The first working model wins and is remembered for the session.
+_OPENROUTER_FREE_MODELS = [
+    "qwen/qwen3.8-27b:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "nex-agi/nex-n2.5-pro:free",
+    "liquid/lfm-2.5-2.6b:free",
+    "nex-agi/nex-n2.5-mini:free",
+]
+_openrouter_model_index = 0
+_openrouter_model_lock = __import__("threading").Lock()
 MIN_SCRIPT_PARAGRAPH_NUMBER = 1
 MAX_SCRIPT_PARAGRAPH_NUMBER = 10
 MAX_SCRIPT_PROMPT_LENGTH = 2000
@@ -254,6 +266,49 @@ def _extract_qwen_generation_text(response) -> str:
 
 
 def _generate_response(prompt: str, app_config=None) -> str:
+    global _openrouter_model_index
+    runtime_app_config = app_config if app_config is not None else config.app
+    llm_provider = str(
+        runtime_app_config.get("llm_provider", DEFAULT_LLM_PROVIDER_ID)
+    ).lower()
+
+    # Auto-rotate OpenRouter free models on 429/404 errors
+    if llm_provider == "openrouter":
+        last_exc = None
+        with _openrouter_model_lock:
+            start_index = _openrouter_model_index
+        for attempt in range(len(_OPENROUTER_FREE_MODELS)):
+            with _openrouter_model_lock:
+                idx = (start_index + attempt) % len(_OPENROUTER_FREE_MODELS)
+                model = _OPENROUTER_FREE_MODELS[idx]
+            patched_config = dict(runtime_app_config)
+            configured_model = patched_config.get("openrouter_model_name", "")
+            # only auto-rotate if the configured model ends with :free or is empty
+            if configured_model.endswith(":free") or not configured_model:
+                patched_config["openrouter_model_name"] = model
+            else:
+                # user has a paid/custom model — don't rotate, just call normally
+                return _generate_response_inner(prompt, patched_config)
+            try:
+                result = _generate_response_inner(prompt, patched_config)
+                # success — remember this model index
+                with _openrouter_model_lock:
+                    _openrouter_model_index = idx
+                if model != configured_model:
+                    logger.info(f"OpenRouter: using free model {model}")
+                return result
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate" in err_str or "404" in err_str or "unavailable" in err_str:
+                    logger.warning(f"OpenRouter model {model} failed ({e}), trying next free model…")
+                    last_exc = e
+                    continue
+                raise  # non-rate-limit error — don't rotate
+        raise last_exc or Exception("All OpenRouter free models are rate-limited. Try again later.")
+    return _generate_response_inner(prompt, runtime_app_config)
+
+
+def _generate_response_inner(prompt: str, app_config=None) -> str:
     try:
         # WebUI 在视频生成期间允许用户准备下一条文案。调用方可以传入提交瞬间
         # 的配置快照，确保模型请求重试期间不会因为后台任务结束并应用新配置，
